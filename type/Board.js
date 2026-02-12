@@ -21,6 +21,9 @@ export class Board {
     this.active = 0
     this.selectedCard = [null, null]
     
+    // on a le droit de tirer qu'une seule carte du slot 12 si on ne la joue pas 
+    this.countSlot12or22 = 0;
+  
     // utile pour la crapette 
     this.prioritySources = {
       41 : null,
@@ -32,8 +35,9 @@ export class Board {
       53 : null, 
       54 : null
     }
-    this.lastMooveCard = null // la dérniere carte jouer
-    this.lastMooveSlot = null // le dérnier slot bouger
+    this.lastMoveCard = null // la dérniere carte jouer
+    this.lastMoveSlot = null // le dérnier slot bouger
+    this.lastBoard = {} // avoir le board complé avoir d'avoir fait un mouvement  
 
     this.board = {
       61: new Pack([]),
@@ -67,32 +71,51 @@ export class Board {
     let display = "\n=== Board state ===\n";
     display += `P1: ${this.p1.pseudo} vs P2: ${this.p2.pseudo}\n`
     
-    // 1. On récupère toutes les clés (11, 12, 61...) et on les trie
     const keys = Object.keys(this.board);
-    
-    let currentLine = ""; // Pour repérer quand on change de "ligne" (ex: passage de 10 à 20)
+    let currentLine = ""; 
+
+    // Définition des codes couleurs ANSI pour la console
+    const RESET = "\x1b[0m";
+    const RED = "\x1b[31m";
+    const BLUE = "\x1b[34m"; // Bleu foncé standard
+    // Note: Si le bleu est trop sombre sur ton écran, remplace [34m par [36m (Cyan) ou [94m (Bleu clair)
 
     for (const key of keys) {
       const pack = this.board[key];
       const count = pack.listCard.length;
 
-      // 2. Gestion de l'affichage de la carte du dessus
-      // On utilise ta méthode pack.getCard() qui renvoie la carte sans l'enlever
-      
-      // console.log(key)
-      const topCardInfo = (pack.isEmpty()) 
-          ? "[     VIDE     ]" 
-          : `[ ${pack.getCard().toString()} ]`;
+      let topCardInfo = "";
 
-      // 3. Séparateur visuel si on change de ligne (ex: on passe des 30 aux 40)
+      if(key === "12" || key === "22") {
+        topCardInfo = "[     ....     ]".padEnd(25);
+      } else if (pack.isEmpty()) {
+        // Cas vide : pas de couleur, juste du texte
+        topCardInfo = "[     VIDE     ]".padEnd(25);
+      } else {
+        const c = pack.getCard();
+        
+        // 1. On prépare le texte d'abord (ex: "[ As de Pique ]")
+        const cardText = `[ ${c.toString()} ]`;
+        
+        // 2. On applique le padding (alignement) SUR LE TEXTE BRUT
+        // C'est important de le faire AVANT la couleur pour garder les colonnes droites
+        const paddedText = cardText.padEnd(25);
+
+        // 3. On choisit la couleur (1 = Rouge, 0 = Bleu)
+        const colorCode = (c.color === 1) ? RED : BLUE;
+
+        // 4. On assemble : Couleur + Texte aligné + Reset couleur
+        topCardInfo = `${colorCode}${paddedText}${RESET}`;
+      }
+
+      // Séparateur visuel
       if (currentLine !== "" && key[0] !== currentLine) {
         display += "----------------------------------\n";
       }
-      currentLine = key[0]; // On met à jour le premier chiffre (1, 2, 3...)
+      currentLine = key[0];
 
-      // 4. Construction de la ligne
-      // .padEnd(25) sert à aligner le texte verticalement en ajoutant des espaces
-      display += `Slot ${key} : ${topCardInfo.padEnd(25)} (Total: ${count})\n`;
+      // Construction de la ligne
+      display += `Slot ${key} : ${topCardInfo} (Total: ${count})\n`;
     }
 
     return display;
@@ -149,8 +172,8 @@ export class Board {
       this.selectCard(62)
       this.cardTransfer(22)
     }
-    this.lastMooveCard = null
-    this.lastMooveCard = null
+    this.lastMoveCard = null
+    this.lastMoveCard = null
   } 
 
   whoBegins() {
@@ -172,12 +195,6 @@ export class Board {
         this.active = 1
         console.log("Player 1 begin, 2 times same num !")
       }
-    }
-
-    if (this.active === 1) {
-      this.forceCardTransfert(12, 11)
-    } else {
-      this.forceCardTransfert(22, 21)
     }
   }
 
@@ -231,12 +248,19 @@ export class Board {
       // si la stack est vide alors on doit poser forcément un as
       if (this.board[slot2].isEmpty()) {
         if (this.selectedCard[0].num === 1) { return true }
+        console.log("la place est vide il faut que ce soit un as")
         return false
       } 
       // +1 la carte
-      if (this.selectedCard[0].num != coverCard.num + 1) { return false } 
+      if (this.selectedCard[0].num != coverCard.num + 1) {
+        console.log("il faut que ce soit +1 la carte")
+        return false 
+      } 
       // il faut que ce soit le même symbole
-      if (this.selectedCard[0].symbol != coverCard.symbol) {return false}
+      if (this.selectedCard[0].symbol != coverCard.symbol) { 
+        console.log("il faut que ce soit le même symbole")
+        return false
+      }
       // toute les condition sont validé => true
       return true
     
@@ -245,19 +269,33 @@ export class Board {
       // si la stack est vide alors on peut poser n'importe quel carte
       if (this.board[slot2].isEmpty()) { return true }
       // -1 la carte
-      if (this.selectedCard[0].num != coverCard.num - 1 ) { return false }  
+      if (this.selectedCard[0].num != coverCard.num - 1 ) { 
+        console.log("il faut que ce soit -1 la carte")
+        return false 
+      }  
       // il faut que ce ne soit pas la même couleur de symbole
-      if (otherSymbole.includes(this.selectedCard[0].symbol) ) { return false }
+      if (otherSymbole.includes(this.selectedCard[0].symbol) ) { 
+        console.log("il faut que ce ne soit pas la même couleur de symbole")
+        return false 
+      }
       // toute les condition sont validé => true
       return true
     
     // si on veut poser dans la pioche adverse
     } else if (adverseCards.includes(slot2)) {
       // la carte +1 ou -1
-      if (this.selectedCard[0].num != coverCard.num + 1 || this.selectedCard[0].num != coverCard.getCard().num - 1) { return false }        
+      if (this.selectedCard[0].num != coverCard.num + 1 || this.selectedCard[0].num != coverCard.getCard().num - 1) { 
+        console.log(" il faut que ce soit +1 ou -1 ")
+        return false 
+      }        
       // il faut que ce soit le même symbole
-      if (this.selectedCard[0].symbol != coverCard.symbol) {return false}
+      if (this.selectedCard[0].symbol != coverCard.symbol) {
+        console.log("Pas le même symoble")
+        return false
+      }
       // toute les condition sont validé => true
+      
+      
       return true
     
     // aucun slot valide
@@ -282,35 +320,42 @@ export class Board {
   }
 
   isPlayableTransferable(slot2){
-    if (!this.isPlayable(slot2)) { return false }
-    if (!this.isTransferable(slot2)) { return false }
+    if (!this.isPlayable(slot2)) { 
+      console.log("not playable")
+      return false 
+    }
+    if (!this.isTransferable(slot2)) {
+      console.log("not transferable")
+      return false 
+    }
+    return true
   }
 
   selectCard(slot1) {
+
+    // on sauvegarde l'ancien board avec de séléctionner une carte
+    this.lastBoard = structuredClone(this.board);
+
     this.selectedCard = [this.board[slot1].takeCard(), slot1]
     // console.log(this.selectedCard)
   }
 
   // tansfert card in slot1 in slot 2
   cardTransfer(slot2) {
+
     // console.log(this.selectedCard[0])
     this.board[slot2].addCard(this.selectedCard[0])
     
-    if (this.selectedCard[1] === "12") {
-      this.forceCardTransfert("12","11")
-    } else if (this.selectedCard[1] === "22") {
-      this.forceCardTransfert("22", "21")
-    }
-    
     // on met a jour les cartes joué 
-    this.lastMooveCard = this.selectedCard[0] 
-    this.lastMooveSlot = slot2
+    this.lastMoveCard = this.selectedCard[0] 
+    this.lastMoveSlot = slot2
     
     // si le slot d'arrivé est dans les zones où on monte on met a jour les cartes qu'on doit monter
     if (Board.zones[4].includes(slot2) || Board.zones[4].includes(slot2)) {
       this.updatePriorityList()
     }
 
+    if (this.countSlot12or22 === 1) { this.countSlot12or22 -= 1 } 
     // on vide les cartes sélectionner
     this.selectedCard = [null, null]
   }
@@ -320,51 +365,99 @@ export class Board {
     this.board[slot2].addCard(theCard)
   }
 
+  cancelSelection() {
+    if (this.selectedCard[0] !== null && this.selectedCard[1] !== null) {
+      const card = this.selectedCard[0];
+      const originalSlot = this.selectedCard[1];
+      
+      this.board[originalSlot].addCard(card);
+      this.selectedCard = [null, null];      
+      console.log("sélection annulée.");
+    } else {
+      console.log("aucune carte sélectionner")
+    }
+  }
+
   endRound() {
+    this.countSlot12or22 = 0;
     if (this.active === 1) {
       this.active = 2
     } else {
       this.active = 1
     }
-    console.log(`au joueurs ${this.active} de jouer `)
+    // console.log(`au joueurs ${this.active} de jouer `)
   }
 
-  
+
+  addDrawPile() {
+    if (this.countSlot12or22 === 0) {
+      if (this.active === 1) {
+        this.forceCardTransfert(12, 11)
+      } else {
+        this.forceCardTransfert(22, 21)
+      }
+      console.log("Carte tiré")
+      this.countSlot12or22 += 1
+    } else {
+      console.log("Tu n'as plus le droit de tirer une carte")
+    }
+  }
+  // peut être faire une fonction pour tirer une carte quand c'est a l'autre joueurs de jouer
+  // attention a la régle qui dit que le joueurs doit joué son tas prioritaire en premier 
+
+
   updatePriorityList(slot2) {
     let updateCard = this.board[slot2].getCard()
     updateCard.num++
     this.prioritySources[slot2] = updateCard 
   }
 
-  isCrapette() {
-    const slots = Object.keys(this.prioritySources);
-    let foundCard = null;
-    let foundSlots = []; 
+  findPriorityMoves() {
+    let cardsToMove = [];
+    let targetSlots = [];
 
-    if (this.lastMooveCard === null ) { return false }
+    const prioritySlots = Object.keys(this.prioritySources);
+    const boardSlots = Object.keys(this.lastBoard);
+    for (const lastBoardSlot of boardSlots) {
+      const stack = this.lastBoard[lastBoardSlot];
+      
+      // on vérifie que la pile n'est pas vide
+      if (!stack || stack.length === 0) continue;
 
-    if (this.lastMooveCard.num === 1 && (!Board.zones[5].includes(this.lastMooveSlot) || !Board.zones[4].includes(this.lastMooveSlot))) {
-      for (const slot of slots) {
-        if (this.prioritySources[slot] !== null) { return true }
-      } 
-    } else {
+      // on prend la carte du dessus (la première du tableau)
+      const candidateCard = stack[0];
 
-      for (const slot of slots) {
-        if (this.prioritySources[slot] === this.lastMooveCard) {
-          foundCard = this.prioritySources[slot]
-          foundSlots.push(slot)
+      // on compare cette carte avec chaque slot de prioritySources
+      for (const prioritySourcesSlot of prioritySlots) {
+        const currentCardInSlot = this.prioritySources[prioritySourcesSlot]; // Souvent null au début
+        if (currentCardInSlot === null) { continue }
+        // c'est ici que tu définis ta règle du jeu
+        if (candidateCard.num === currentCardInSlot.num && candidateCard.symbole === currentCardInSlot.symbole) {
+            
+          cardsToMove.push(candidateCard);
+          targetSlots.push(prioritySourcesSlot);
         }
       }
-        
-      if (foundCard === null) {
-        return false
-      } else {
-        if (foundSlots.includes(this.lastMooveSlot)) {
-          return false 
-        } else {
-          return true 
-        }
-      } 
     }
+
+    return { cardsToMove, targetSlots };
+  }
+
+
+  isCrapette() {
+    // on récupére les card qu'on doit move et dans quel slot on doit les mettre
+    const { cardsToMove, targetSlots } = this.findPriorityMoves();
+
+    // On vérifie si on a une carte a monté 
+    if (cardsToMove.length === 0) { return false }
+    
+    
+    // on vérifie si le joueurs ne l'a pas juste remis dans ça pioche 
+    const playerCards = (this.active === 1) ? [11, 13] : [21, 23] 
+    if (playerCards.includes(this.lastMoveSlot)) { return false }
+
+    // on regarde si le dernier move était dans la zone5 ou 4 
+    if (Board.zones[4].includes(this.lastMoveSlot) || Board.zones[5].includes(this.lastMoveSlot) ) { return false }
+    else { return true }
   }
 }
