@@ -38,6 +38,11 @@ export class Board {
     this.lastMoveCard = null // la dérniere carte jouer
     this.lastMoveSlot = null // le dérnier slot bouger
     this.lastBoard = {} // avoir le board complé avoir d'avoir fait un mouvement  
+    
+    this.countCrapette = 0 // savoir si juste avant on a eu une crapette 
+    // +1 quand quelqu'un dit crapette et donc on peut pas redire tout de suite crapette, on peut pas aller a plus que 1
+    // -1 quand un joueurs pose une carte qui n'est pas dans la zone 4 ou 5
+
 
     this.board = {
       61: new Pack([]),
@@ -220,7 +225,7 @@ export class Board {
 
     // on regarde si la carte peut être jouér 
     for (const slot of allSlots) {
-      if (this.isPlayable(slot, false)) {
+      if (slot !== prioritySlot && this.isPlayable(slot, false)) {
         this.selectedCard = [null, null]
         return true
       }
@@ -256,7 +261,11 @@ export class Board {
       console.log("no active player")
       return false
     }
-
+    const allSlots = Object.keys(this.board).map(Number); // Convertit en nombres
+    if (allSlots.includes(position)) {
+      console.log("position hors du tableau")
+      return false 
+    }
 
     const isEmptyPosition = (!this.board[position].isEmpty()) ? "" : "la position est vide"
     console.log(isEmptyPosition)  
@@ -274,12 +283,6 @@ export class Board {
     const coverCard = this.board[slot2].getCard()
     // on a besoin de savoir les symboles pour les slot possible pour la zone3
     // Board.symbol = ["Spade", "Club", "Diamond", "Heart"]
-    let otherSymbole = []
-    if (this.selectedCard[0].symbol === Board.symbol[2] || this.selectedCard[0].symbol === Board.symbol[3] ) {
-      otherSymbole = [Board.symbol[0], Board.symbol[1]] 
-    } else {
-      otherSymbole = [Board.symbol[2], Board.symbol[3]]
-    }
 
 
     // si on veut poser dans la zone 4 ou 5
@@ -301,7 +304,7 @@ export class Board {
         return false
       }
       // toute les condition sont validé => true
-      console.log("tu peux zones45")
+      console.log("45")
       return true
     
     // si on veut poser dans la zone 3 
@@ -313,13 +316,20 @@ export class Board {
         if (verbose) console.log("il faut que ce soit -1 la carte");
         return false 
       }  
+
+      const redSymbols = [Board.symbol[2], Board.symbol[3]];
+      const isCoverRed = redSymbols.includes(coverCard.symbol);
+      const isSelectedRed = redSymbols.includes(this.selectedCard[0].symbol);
+
       // il faut que ce ne soit pas la même couleur de symbole
-      if (otherSymbole.includes(this.selectedCard[0].symbol) ) { 
+      if (isCoverRed === isSelectedRed ) { 
         if (verbose) console.log("il faut que ce ne soit pas la même couleur de symbole");
         return false 
       }
       // toute les condition sont validé => true
-      console.logt("tu peux zones3")
+      console.log(coverCard)
+      console.log(this.selectedCard[0])
+      console.log("3")
       return true
     
     // si on veut poser dans la pioche adverse
@@ -343,7 +353,7 @@ export class Board {
         return false
       }
       // toute les condition sont validé => true
-      
+      console.log("adverse")
       return true
     
     // aucun slot valide
