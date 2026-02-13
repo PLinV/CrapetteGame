@@ -25,7 +25,7 @@ export class Board {
     this.countSlot12or22 = 0;
   
     // utile pour la crapette 
-    this.prioritySources = {
+    this.crapetteSources = {
       41 : null,
       42 : null,
       43 : null,
@@ -167,7 +167,7 @@ export class Board {
       this.selectCard(61)
       this.cardTransfer(12)
     }
-
+    
     for(let i = 1; i < 37 ; i++){
       this.selectCard(62)
       this.cardTransfer(22)
@@ -198,6 +198,38 @@ export class Board {
     }
   }
 
+  // quand le joueur selectionner une carte 
+  // on regarde si il peut jouer une carte de la priority zone 
+  // on prend le slot prioritaire du joueur on regarde la carte 
+  // on regarde si cette carte est jouable sur tout les autres slot 
+  canPlayPriorityCard() {
+    if (this.selectedCard[0] !== null) {
+      console.log("une carte est déjâ séléctionner")
+      return false 
+    }
+
+    const prioritySlot = (this.active === 1) ? 13 : 23
+    if (this.board[prioritySlot] === null ) { 
+      return false
+    }
+    const priorityCard = this.board[prioritySlot].getCard()
+    const allSlots = Object.keys(this.board).map(Number); // Convertit en nombres
+
+    // on met la carte en séléction
+    this.selectedCard = [priorityCard, prioritySlot]
+
+    // on regarde si la carte peut être jouér 
+    for (const slot of allSlots) {
+      if (this.isPlayable(slot, false)) {
+        this.selectedCard = [null, null]
+        return true
+      }
+    }
+
+    this.selectedCard = [null, null]
+    return false
+  }
+  
   // true => selectable card, false => card not selectable
   isSelectable(position) {
     // on a déjà une carte
@@ -206,7 +238,14 @@ export class Board {
       return false
     }
 
-    // slot juste où tu pas selec
+    const drawSlot = (this.active === 1) ? 11 : 21
+
+    if (position === drawSlot && this.canPlayPriorityCard()) {
+      console.log("la zone prioritaire peut être jouer")
+      return false
+    }
+
+    // slot où tu pas selec
     if (Board.zones[4].includes(position) || Board.zones[5].includes(position) || [61, 62].includes(position) || [12, 22].includes(position)) {
       console.log("Postion is not selectable")
       return false
@@ -224,12 +263,12 @@ export class Board {
     return !this.board[position].isEmpty() 
   }
 
-  isPlayable(slot2) {
+  isPlayable(slot2, verbose = true) {
     // il faut une carte sélectionner
-    if (this.selectedCard[0] === null && this.selectedCard[1] === null) { 
-      console.log("aucune carte séléctionner")
-      return false
-    }
+    // if (this.selectedCard[0] === null && this.selectedCard[1] === null) { 
+    //  console.log("aucune carte séléctionner")
+    //  return false
+    //}
   
     const adverseCards = (this.active === 1) ? [21, 23] : [11, 13] 
     const coverCard = this.board[slot2].getCard()
@@ -248,17 +287,17 @@ export class Board {
       // si la stack est vide alors on doit poser forcément un as
       if (this.board[slot2].isEmpty()) {
         if (this.selectedCard[0].num === 1) { return true }
-        console.log("la place est vide il faut que ce soit un as")
+        if (verbose) console.log("la place est vide il faut que ce soit un as");
         return false
       } 
       // +1 la carte
       if (this.selectedCard[0].num != coverCard.num + 1) {
-        console.log("il faut que ce soit +1 la carte")
+        if (verbose) console.log("il faut que ce soit +1 la carte");
         return false 
       } 
       // il faut que ce soit le même symbole
       if (this.selectedCard[0].symbol != coverCard.symbol) { 
-        console.log("il faut que ce soit le même symbole")
+        if (verbose) console.log("il faut que ce soit le même symbole");
         return false
       }
       // toute les condition sont validé => true
@@ -270,12 +309,12 @@ export class Board {
       if (this.board[slot2].isEmpty()) { return true }
       // -1 la carte
       if (this.selectedCard[0].num != coverCard.num - 1 ) { 
-        console.log("il faut que ce soit -1 la carte")
+        if (verbose) console.log("il faut que ce soit -1 la carte");
         return false 
       }  
       // il faut que ce ne soit pas la même couleur de symbole
       if (otherSymbole.includes(this.selectedCard[0].symbol) ) { 
-        console.log("il faut que ce ne soit pas la même couleur de symbole")
+        if (verbose) console.log("il faut que ce ne soit pas la même couleur de symbole");
         return false 
       }
       // toute les condition sont validé => true
@@ -285,12 +324,12 @@ export class Board {
     } else if (adverseCards.includes(slot2)) {
       // la carte +1 ou -1
       if (this.selectedCard[0].num != coverCard.num + 1 || this.selectedCard[0].num != coverCard.getCard().num - 1) { 
-        console.log(" il faut que ce soit +1 ou -1 ")
+        if (verbose) console.log(" il faut que ce soit +1 ou -1 ");
         return false 
       }        
       // il faut que ce soit le même symbole
       if (this.selectedCard[0].symbol != coverCard.symbol) {
-        console.log("Pas le même symoble")
+        if (verbose) console.log("Pas le même symoble");
         return false
       }
       // toute les condition sont validé => true
@@ -351,8 +390,8 @@ export class Board {
     this.lastMoveSlot = slot2
     
     // si le slot d'arrivé est dans les zones où on monte on met a jour les cartes qu'on doit monter
-    if (Board.zones[4].includes(slot2) || Board.zones[4].includes(slot2)) {
-      this.updatePriorityList()
+    if (Board.zones[4].includes(slot2) || Board.zones[5].includes(slot2)) {
+      this.updateCrapetteList(slot2)
     }
 
     if (this.countSlot12or22 === 1) { this.countSlot12or22 -= 1 } 
@@ -402,40 +441,49 @@ export class Board {
       console.log("Tu n'as plus le droit de tirer une carte")
     }
   }
-  // peut être faire une fonction pour tirer une carte quand c'est a l'autre joueurs de jouer
-  // attention a la régle qui dit que le joueurs doit joué son tas prioritaire en premier 
+  
 
 
-  updatePriorityList(slot2) {
+  updateCrapetteList(slot2) {
     let updateCard = this.board[slot2].getCard()
-    updateCard.num++
-    this.prioritySources[slot2] = updateCard 
+    let nextExpectedCard = structuredClone(updateCard);
+    
+    nextExpectedCard.num++;
+
+    this.crapetteSources[slot2] = nextExpectedCard;
   }
 
-  findPriorityMoves() {
+  findCrapetteMoves() {
     let cardsToMove = [];
     let targetSlots = [];
 
-    const prioritySlots = Object.keys(this.prioritySources);
+    const crapetteSlots = Object.keys(this.crapetteSources);
     const boardSlots = Object.keys(this.lastBoard);
     for (const lastBoardSlot of boardSlots) {
-      const stack = this.lastBoard[lastBoardSlot];
+      const stack = this.lastBoard[lastBoardSlot].listCard;
       
       // on vérifie que la pile n'est pas vide
       if (!stack || stack.length === 0) continue;
 
       // on prend la carte du dessus (la première du tableau)
       const candidateCard = stack[0];
-
+      console.log(stack)
+      console.log(candidateCard)
       // on compare cette carte avec chaque slot de prioritySources
-      for (const prioritySourcesSlot of prioritySlots) {
-        const currentCardInSlot = this.prioritySources[prioritySourcesSlot]; // Souvent null au début
+      for (const crapetteSourcesSlot of crapetteSlots) {
+        const currentCardInSlot = this.crapetteSources[crapetteSourcesSlot]; // Souvent null au début
+        if (currentCardInSlot === null && candidateCard.num === 1) { 
+          cardsToMove.push(candidateCard);
+          targetSlots.push(crapetteSourcesSlot);
+          continue;
+        }  
+
         if (currentCardInSlot === null) { continue }
         // c'est ici que tu définis ta règle du jeu
         if (candidateCard.num === currentCardInSlot.num && candidateCard.symbole === currentCardInSlot.symbole) {
             
           cardsToMove.push(candidateCard);
-          targetSlots.push(prioritySourcesSlot);
+          targetSlots.push(crapetteSourcesSlot);
         }
       }
     }
@@ -446,7 +494,7 @@ export class Board {
 
   isCrapette() {
     // on récupére les card qu'on doit move et dans quel slot on doit les mettre
-    const { cardsToMove, targetSlots } = this.findPriorityMoves();
+    const { cardsToMove, targetSlots } = this.findCrapetteMoves();
 
     // On vérifie si on a une carte a monté 
     if (cardsToMove.length === 0) { return false }
