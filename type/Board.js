@@ -285,7 +285,7 @@ export class Board {
     // si on veut poser dans la zone 4 ou 5
     if(Board.zones[4].includes(slot2) || Board.zones[5].includes(slot2) ) {
       // si la stack est vide alors on doit poser forcément un as
-      if (this.board[slot2].isEmpty()) {
+      if (coverCard === undefined) {
         if (this.selectedCard[0].num === 1) { return true }
         if (verbose) console.log("la place est vide il faut que ce soit un as");
         return false
@@ -301,12 +301,13 @@ export class Board {
         return false
       }
       // toute les condition sont validé => true
+      console.log("tu peux zones45")
       return true
     
     // si on veut poser dans la zone 3 
     } else if (Board.zones[3].includes(slot2)) {
       // si la stack est vide alors on peut poser n'importe quel carte
-      if (this.board[slot2].isEmpty()) { return true }
+      if (coverCard === undefined) { return true }
       // -1 la carte
       if (this.selectedCard[0].num != coverCard.num - 1 ) { 
         if (verbose) console.log("il faut que ce soit -1 la carte");
@@ -318,12 +319,21 @@ export class Board {
         return false 
       }
       // toute les condition sont validé => true
+      console.logt("tu peux zones3")
       return true
     
     // si on veut poser dans la pioche adverse
     } else if (adverseCards.includes(slot2)) {
       // la carte +1 ou -1
-      if (this.selectedCard[0].num != coverCard.num + 1 || this.selectedCard[0].num != coverCard.getCard().num - 1) { 
+      if(coverCard === undefined) { 
+        if (verbose) console.log("il faut que il y est une carte pour poser dessus")
+        return false 
+      }
+
+      // console.log(coverCard)
+      // console.log(this.selectedCard[0])
+
+      if (this.selectedCard[0].num != coverCard.num + 1 && this.selectedCard[0].num != coverCard.num - 1) { 
         if (verbose) console.log(" il faut que ce soit +1 ou -1 ");
         return false 
       }        
@@ -333,7 +343,6 @@ export class Board {
         return false
       }
       // toute les condition sont validé => true
-      
       
       return true
     
@@ -467,8 +476,8 @@ export class Board {
 
       // on prend la carte du dessus (la première du tableau)
       const candidateCard = stack[0];
-      console.log(stack)
-      console.log(candidateCard)
+      // console.log(stack)
+      // console.log(candidateCard)
       // on compare cette carte avec chaque slot de prioritySources
       for (const crapetteSourcesSlot of crapetteSlots) {
         const currentCardInSlot = this.crapetteSources[crapetteSourcesSlot]; // Souvent null au début

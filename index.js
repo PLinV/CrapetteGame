@@ -48,7 +48,7 @@ async function gameLoop() {
       console.log(`${j2} à toi de jouer : `)      
     }
     
-    // Petite aide pour le joueur
+    // liste des commandes pour le joueur
     console.log("\nCommandes disponibles :");
     console.log(actionPrincipale);
     console.log(" - tirer                       : Piocher une carte (si applicable)");
@@ -130,7 +130,11 @@ async function gameLoop() {
         break; // fin
       
       case 'tirer':
-        game.addDrawPile(); 
+        if (game.canPlayPriorityCard()) {
+          console.log("la zone prioritaire peut être jouer")
+        } else {
+          game.addDrawPile(); 
+        }
         break;
 
       case 'crapette':
