@@ -8,37 +8,39 @@ import { WebSocketServer } from 'ws';
 const app = express();
 const port = 3000; 
 app.use(cors());
-/*  
 
-app.get('/', (req, res) => {
-  res.json({ message: 'Bonjour'})
-}); 
-
-app.listen(port, () => {
-  
-}); 
-*/
-
-// On crée le serveur HTTP et on y attache le WebSocket
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });
 
-// Dès qu'une page se charge (ou se recharge), cet événement se déclenche
 wss.on('connection', (ws) => {
-    console.log('Nouvelle page chargée : Un client vient de se connecter !');
-
-    // On prépare notre message sous forme d'objet
-    const reponse = { message: 'Bonjour' };
-    
-    // On l'envoie IMMÉDIATEMENT au client qui vient de se connecter
+  console.log( 'Nouvelle page chargée : Un client vient de se connecter !' );
+  const acitveT1 = {cible:'t1', message: "acitveT1" }
+  ws.send(JSON.stringify(acitveT1));
+  
+  ws.on('message', (messageBrut) => {
+    var reponse; 
+    const requete = JSON.parse(messageBrut.toString()); 
+    switch (requete.message) {
+      case 'oui':
+        reponse = { cible:'t2', message: 'Bonjour'}
+        break; 
+      case 'non': 
+        reponse = { cible:'t2', message: 'bon bah non alors'}
+        break; 
+      default:
+        reponse = { cible:'t2', message: 'mais que veut tu'} 
+        
+      }
     ws.send(JSON.stringify(reponse));
+    // On l'envoie IMMÉDIATEMENT au client qui vient de se connecter
+  })
 
-    // Si le joueur ferme l'onglet ou recharge la page
-    ws.on('close', () => {
-        console.log('Un client a fermé la page ou rechargé.');
-    });
+  
+  ws.on('close', () => {
+    console.log('Un client a fermé la page ou rechargé.');
+  });
 });
 
 httpServer.listen(port, () => {
-    console.log(`Serveur démarré sur http://localhost:${port}`);
+  console.log(`Serveur démarré sur http://localhost:${port}`);
 });

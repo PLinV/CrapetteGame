@@ -6,6 +6,10 @@ body {
     margin-top: 50px;
 }
 
-#title {
+#title1 {
     color: #f1c40f;
+}
+
+#title2 {
+    color: bisque;
 }
