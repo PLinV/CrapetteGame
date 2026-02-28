@@ -38,8 +38,7 @@ export class Board {
     this.lastMoveCard = null // la dérniere carte jouer
     this.lastMoveSlot = null // le dérnier slot bouger
     this.lastBoard = {} // avoir le board complé avoir d'avoir fait un mouvement  
-    
-    this.countCrapette = 0 // savoir si juste avant on a eu une crapette 
+    this.countCrapette = 1 // savoir si juste avant on a eu une crapette 
     // +1 quand quelqu'un dit crapette et donc on peut pas redire tout de suite crapette, on peut pas aller a plus que 1
     // -1 quand un joueurs pose une carte qui n'est pas dans la zone 4 ou 5
 
@@ -179,6 +178,7 @@ export class Board {
     }
     this.lastMoveCard = null
     this.lastMoveCard = null
+    this.countCrapette = 1 
   } 
 
   whoBegins() {
@@ -219,7 +219,7 @@ export class Board {
     }
     const priorityCard = this.board[prioritySlot].getCard()
     const allSlots = Object.keys(this.board).map(Number); // Convertit en nombres
-
+    
     // on met la carte en séléction
     this.selectedCard = [priorityCard, prioritySlot]
 
@@ -230,7 +230,7 @@ export class Board {
         return true
       }
     }
-
+    
     this.selectedCard = [null, null]
     return false
   }
@@ -241,6 +241,12 @@ export class Board {
     if (this.selectedCard[0] !== null && this.selectedCard[1] !== null) {
       console.log("a card is already select")
       return false
+    }
+
+    const allSlots = Object.keys(this.board).map(Number); // Convertit en nombres
+    if (!allSlots.includes(position)) {
+      console.log("position hors du tableau")
+      return false 
     }
 
     const drawSlot = (this.active === 1) ? 11 : 21
@@ -260,11 +266,6 @@ export class Board {
     if (this.active === 0) {
       console.log("no active player")
       return false
-    }
-    const allSlots = Object.keys(this.board).map(Number); // Convertit en nombres
-    if (allSlots.includes(position)) {
-      console.log("position hors du tableau")
-      return false 
     }
 
     const isEmptyPosition = (!this.board[position].isEmpty()) ? "" : "la position est vide"
@@ -403,7 +404,6 @@ export class Board {
 
     // console.log(this.selectedCard[0])
     this.board[slot2].addCard(this.selectedCard[0])
-    
     // on met a jour les cartes joué 
     this.lastMoveCard = this.selectedCard[0] 
     this.lastMoveSlot = slot2
@@ -411,6 +411,8 @@ export class Board {
     // si le slot d'arrivé est dans les zones où on monte on met a jour les cartes qu'on doit monter
     if (Board.zones[4].includes(slot2) || Board.zones[5].includes(slot2)) {
       this.updateCrapetteList(slot2)
+    } else {
+      if (this.countCrapette >= 1 ) { this.countCrapette-- }
     }
 
     if (this.countSlot12or22 === 1) { this.countSlot12or22 -= 1 } 
@@ -512,6 +514,7 @@ export class Board {
 
 
   isCrapette() {
+    if (this.countCrapette >= 1) { return false }
     // on récupére les card qu'on doit move et dans quel slot on doit les mettre
     const { cardsToMove, targetSlots } = this.findCrapetteMoves();
 
@@ -525,6 +528,11 @@ export class Board {
 
     // on regarde si le dernier move était dans la zone5 ou 4 
     if (Board.zones[4].includes(this.lastMoveSlot) || Board.zones[5].includes(this.lastMoveSlot) ) { return false }
-    else { return true }
+
+    else { 
+      this.countCrapette++ // on dit que un joueurs a déjầ dit crapette
+      console.log(cardsToMove, targetSlots)
+      return true 
+    }
   }
 }
